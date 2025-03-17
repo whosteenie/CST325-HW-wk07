@@ -81,9 +81,7 @@
 			initGL();
 			createShaders();
 			createTriangleGeometry();
-
-			// uncomment when directed by the guide
-			// createLineGridGeometry();
+			createLineGridGeometry();
 
 			if (gl) {
 				updateAndRender();
@@ -104,6 +102,8 @@
 			if (!gl) {
 				alert("Could not initialise WebGL, sorry :-(");
 			}
+
+			gl.enable(gl.DEPTH_TEST);
 		}
 
 		// -------------------------------------------------------------------------
@@ -203,14 +203,14 @@
 
 			// specify the horizontal lines
 			for (let i = -10; i <= 10; ++i) {
-				// add position for line start point (x value should be i)
-				// add position for line end point (x value should be i)
+				linePositions.push(i, -1, 10);
+				linePositions.push(i, -1, -10);
 			}
 
 			// specify the lateral lines
 			for (let i = -10; i <= 10; ++i) {
-				// add position for line start point (z value should be i)
-				// add position for line end point (z value should be i)
+				linePositions.push(10, -1, i);
+				linePositions.push(-10, -1, i);
 			}
 
 			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(linePositions), gl.STATIC_DRAW);
@@ -240,16 +240,15 @@
 			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
 			renderTriangle(time.secondsElapsedSinceStart++);
-			// renderLines();
+			renderLines();
 		}
 
 		// -------------------------------------------------------------------------
 		function renderTriangle(secondsElapsedSinceStart) {
 			// calculate the number of degrees we should have rotated given how much time has elapsed
 			// 60 degrees per second
-			const degrees = secondsElapsedSinceStart;
 
-			let rotateY = new Matrix4().makeRotationY(degrees);
+			let rotateY = new Matrix4().makeRotationY(secondsElapsedSinceStart);
 
 			// todo #11 - make the triangle rotate
 			triangleGeometry.worldMatrix.makeIdentity();
@@ -289,15 +288,33 @@
 
 		// -------------------------------------------------------------------------
 		function renderLines() {
-			// todo #12
+			lineGridGeometry.worldMatrix.makeIdentity();
 
-			// todo update the triangle geometry world matrix here (used to place the triangle into world space)
-			// todo set view matrix to identity
-			// todo set the projection matrix using values from online guide
+			projectionMatrix.makePerspective(45,(gl.canvasWidth / gl.canvasHeight),0.1,1000);
 
-			// todo bind and map(gl.vertexAttribPointer) the buffers
+			gl.bindBuffer(gl.ARRAY_BUFFER, lineGridGeometry.positionBuffer);
+			gl.vertexAttribPointer(
+					lineGridGeometry.shaderProgram.vertexPositionAttribute,
+					3,
+					gl.FLOAT,
+					gl.FALSE,
+					0,
+					0
+			);
 
-			// todo - send matrices to shader
+			gl.bindBuffer(gl.ARRAY_BUFFER, lineGridGeometry.colorBuffer);
+			gl.vertexAttribPointer(
+					lineGridGeometry.shaderProgram.vertexColorAttribute,
+					3,
+					gl.FLOAT,
+					gl.FALSE,
+					0,
+					0
+			);
+
+			gl.uniformMatrix4fv(shaderProgram.worldMatrixUniform, false, lineGridGeometry.worldMatrix.clone().transpose().elements);
+			gl.uniformMatrix4fv(shaderProgram.viewMatrixUniform, false, viewMatrix.clone().transpose().elements);
+			gl.uniformMatrix4fv(shaderProgram.projectionMatrixUniform, false, projectionMatrix.clone().transpose().elements);
 
 			// --------------------------------------------
 			// below is done for you, uncomment when ready
@@ -306,7 +323,7 @@
 			//        and set up the uniform (like other uniforms) or the value below will never change
 			// gl.uniform1f(shaderProgram.timeUniform, time.secondsElapsedSinceStart);
 
-			// gl.drawArrays(gl.LINES, 0, lineGridGeometry.bufferItemCount);
+			gl.drawArrays(gl.LINES, 0, lineGridGeometry.bufferItemCount);
 		}
 
 	</script>
